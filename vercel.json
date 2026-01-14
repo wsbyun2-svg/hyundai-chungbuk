@@ -1,8 +1,0 @@
-{
-  "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "https://hyundai-two-phi.vercel.app/$1"
-    }
-  ]
-}
