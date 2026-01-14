@@ -1,26 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
 
-// 이 설정이 있어야 모든 페이지에 대해 middleware가 실행됩니다.
 export const config = {
+  // 모든 경로에서 이 미들웨어가 실행되도록 설정합니다.
   matcher: '/:path*',
 };
 
 export async function middleware(req: NextRequest) {
-  // 원본 주소 설정 (뒤에 쿼리 스트링까지 포함)
-  const url = new URL(req.nextUrl.pathname + req.nextUrl.search, "https://hyundai-two-phi.vercel.app");
+  // 원본 사이트 주소와 현재 접속하려는 경로를 합칩니다.
+  const targetUrl = "https://hyundai-two-phi.vercel.app" + req.nextUrl.pathname + req.nextUrl.search;
   
   try {
-    const res = await fetch(url.toString());
+    const res = await fetch(targetUrl);
     const contentType = res.headers.get("content-type");
 
-    // HTML 응답일 때만 텍스트를 수정함
+    // 불러온 내용이 HTML일 때만 글자를 바꿉니다.
     if (contentType && contentType.includes("text/html")) {
       let html = await res.text();
       
-      // 글자 치환 (모든 '동북부'를 '충북'으로)
+      // 모든 "동북부" 단어를 "충북"으로 치환합니다.
       html = html.replace(/동북부/g, "충북");
 
-      // 수정된 HTML로 새로운 응답 생성
+      // 수정된 HTML 내용을 담은 새 응답을 보냅니다.
       return new NextResponse(html, {
         headers: {
           "content-type": "text/html; charset=utf-8",
@@ -28,9 +28,10 @@ export async function middleware(req: NextRequest) {
       });
     }
 
+    // 이미지, CSS, JS 파일 등은 수정 없이 그대로 전달합니다.
     return res;
-  } catch (e) {
-    // 에러 발생 시 원본 응답 반환
+  } catch (error) {
+    // 에러 발생 시 기본 응답을 반환합니다.
     return NextResponse.next();
   }
 }
