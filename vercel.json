@@ -1,8 +1,8 @@
 {
-  "routes": [
+  "rewrites": [
     {
-      "src": "/(.*)",
-      "dest": "/api/replace"
+      "source": "/(.*)",
+      "destination": "https://hyundai-two-phi.vercel.app/$1"
     }
   ]
 }
