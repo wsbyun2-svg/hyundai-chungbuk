@@ -2,7 +2,7 @@
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "https://hyundai-two-phi.vercel.app/$1"
+      "dest": "/api/replace"
     }
   ]
 }
