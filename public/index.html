@@ -3,89 +3,120 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>충북 현대자동차 재고 리스트</title>
+    <title>충북 현대차 재고 검색 시스템</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        .active-tab { background-color: #002c5f !important; color: white !important; }
-        th { background-color: #f3f4f6; position: sticky; top: 0; }
+        :root { --hyundai-blue: #002c5f; }
+        .bg-hyundai { background-color: var(--hyundai-blue); }
+        .text-hyundai { color: var(--hyundai-blue); }
+        .filter-select { @apply border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500; }
     </style>
 </head>
-<body class="bg-gray-100">
-    <nav class="bg-[#002c5f] p-4 text-white text-center font-bold text-xl">
-        🚗 충북 현대자동차 재고 현황 (실시간 업데이트)
-    </nav>
+<body class="bg-gray-50 text-gray-800">
 
-    <div class="max-w-7xl mx-auto p-4">
-        <div id="tab-container" class="flex flex-wrap gap-2 mb-6 justify-center">
-            </div>
-
-        <div class="bg-white rounded-lg shadow overflow-x-auto max-h-[700px]">
-            <table class="w-full text-sm text-left border-collapse">
-                <thead>
-                    <tr id="table-header">
-                        </tr>
-                </thead>
-                <tbody id="table-body">
-                    <tr>
-                        <td colspan="10" class="p-10 text-center text-gray-500 text-lg">
-                            상단 메뉴에서 차종을 선택하거나 데이터를 불러오는 중입니다...
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
+    <header class="bg-hyundai text-white p-5 shadow-lg">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-bold">🚗 충북 현대차 실시간 재고 현황</h1>
+            <span class="text-sm opacity-80">엑셀 업로드로 자동 업데이트됨</span>
         </div>
-    </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto p-6">
+        <div class="bg-white p-6 rounded-xl shadow-sm mb-8 grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+                <label class="block text-xs font-bold text-gray-500 mb-1">차종 선택</label>
+                <select id="select-model" class="w-full filter-select" onchange="updateSubFilters()">
+                    <option value="">차종을 선택하세요</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-gray-500 mb-1">세부 트림</label>
+                <select id="select-trim" class="w-full filter-select" onchange="applyFilters()">
+                    <option value="">전체</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-gray-500 mb-1">외장 컬러</label>
+                <select id="select-color" class="w-full filter-select" onchange="applyFilters()">
+                    <option value="">전체</option>
+                </select>
+            </div>
+            <div class="flex items-end">
+                <button onclick="resetFilters()" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold py-2 rounded transition">
+                    필터 초기화
+                </button>
+            </div>
+        </div>
+
+        <div class="mb-4 text-sm text-gray-600">
+            총 <span id="count-total" class="font-bold text-blue-600">0</span>개의 매물이 검색되었습니다.
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm text-left">
+                    <thead class="bg-gray-50 border-b">
+                        <tr id="table-header">
+                            </tr>
+                    </thead>
+                    <tbody id="table-body" class="divide-y">
+                        </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
 
     <script>
-        let allCarData = {};
+        let rawData = {}; 
+        let currentModelData = [];
 
-        // 1. 서버(api/cars)에서 엑셀 데이터 가져오기
         async function init() {
             try {
                 const res = await fetch('/api/cars');
-                allCarData = await res.json();
+                rawData = await res.json();
                 
-                const sheetNames = Object.keys(allCarData);
-                if (sheetNames.length === 0) throw new Error("데이터가 없습니다.");
-
-                renderTabs(sheetNames);
-                // 첫 번째 시트 데이터 바로 보여주기
-                renderData(sheetNames[0]);
-            } catch (err) {
-                document.getElementById('table-body').innerHTML = `<tr><td colspan="10" class="p-10 text-center text-red-500">에러: ${err.message}<br>관리자 페이지에서 엑셀을 먼저 업로드해주세요.</td></tr>`;
-            }
+                // 차종 셀렉트 박스 채우기
+                const modelSelect = document.getElementById('select-model');
+                Object.keys(rawData).forEach(model => {
+                    const opt = document.createElement('option');
+                    opt.value = model;
+                    opt.textContent = model;
+                    modelSelect.appendChild(opt);
+                });
+            } catch (e) { alert("데이터 로딩 실패"); }
         }
 
-        // 2. 엑셀 시트별 탭(버튼) 생성
-        function renderTabs(names) {
-            const container = document.getElementById('tab-container');
-            container.innerHTML = names.map(name => 
-                `<button onclick="renderData('${name}')" id="tab-${name}" class="px-4 py-2 bg-white border border-gray-300 rounded-full hover:bg-gray-100 transition shadow-sm">${name}</button>`
-            ).join('');
+        function updateSubFilters() {
+            const model = document.getElementById('select-model').value;
+            if(!model) return;
+            
+            currentModelData = rawData[model];
+            
+            // 트림 필터 업데이트
+            const trims = [...new Set(currentModelData.map(item => item['트림']))];
+            updateSelect('select-trim', trims);
+            
+            // 컬러 필터 업데이트
+            const colors = [...new Set(currentModelData.map(item => item['칼라']))];
+            updateSelect('select-color', colors);
+
+            applyFilters();
         }
 
-        // 3. 선택한 차종의 데이터를 표로 그리기
-        function renderData(sheetName) {
-            const data = allCarData[sheetName];
-            if (!data || data.length === 0) return;
-
-            // 탭 활성화 표시
-            document.querySelectorAll('#tab-container button').forEach(btn => btn.classList.remove('active-tab'));
-            document.getElementById(`tab-${sheetName}`).classList.add('active-tab');
-
-            // 헤더(제목) 생성
-            const headers = Object.keys(data[0]);
-            document.getElementById('table-header').innerHTML = headers.map(h => `<th class="p-3 border-b">${h}</th>`).join('');
-
-            // 내용 생성
-            document.getElementById('table-body').innerHTML = data.map(row => `
-                <tr class="hover:bg-gray-50 border-b">
-                    ${headers.map(h => `<td class="p-3">${row[h] || '-'}</td>`).join('')}
-                </tr>
-            `).join('');
+        function updateSelect(id, items) {
+            const el = document.getElementById(id);
+            el.innerHTML = '<option value="">전체</option>';
+            items.filter(Boolean).forEach(item => {
+                const opt = document.createElement('option');
+                opt.value = item;
+                opt.textContent = item;
+                el.appendChild(opt);
+            });
         }
 
-        init();
-    </script>
-</body>
-</html>
+        function applyFilters() {
+            const trimVal = document.getElementById('select-trim').value;
+            const colorVal = document.getElementById('select-color').value;
+
+            const filtered = currentModelData.filter(item => {
+                return (!trim
