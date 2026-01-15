@@ -1,130 +1,15 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>충북 현대차 검색엔진</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        .filter-group { @apply flex flex-col gap-1; }
-        label { @apply text-xs font-bold text-gray-400 uppercase ml-1; }
-        select { @apply border border-gray-200 rounded-lg p-3 text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-all; }
-        th { @apply bg-gray-50 p-3 text-xs font-bold text-gray-500 border-b sticky top-0; }
-        td { @apply p-3 text-sm border-b text-gray-700; }
-    </style>
-</head>
-<body class="bg-gray-50 p-4 md:p-10 text-gray-900">
-    <div class="max-w-6xl mx-auto">
-        <header class="mb-10">
-            <h1 class="text-3xl font-black tracking-tight">HYUNDAI <span class="text-blue-600">CHUNGBUK</span></h1>
-            <p class="text-gray-400 mt-2 font-medium">실시간 특별조건 재고 검색 시스템</p>
-        </header>
-
-        <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 mb-8">
-            <div id="filter-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div class="filter-group">
-                    <label>차종별 (Sheet)</label>
-                    <select id="main-model" onchange="loadSheetData(this.value)">
-                        <option value="">차종을 선택하세요</option>
-                    </select>
-                </div>
-                </div>
-            <div class="mt-8 pt-6 border-t flex justify-end">
-                <button onclick="location.reload()" class="text-sm font-bold text-gray-400 hover:text-gray-600 transition">🔄 모든 필터 초기화</button>
-            </div>
-        </div>
-
-        <div class="mb-4 text-sm font-medium">검색 결과: <span id="res-count" class="text-blue-600">0</span>대</div>
-        
-        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            <div class="overflow-x-auto max-h-[600px]">
-                <table class="w-full text-left border-collapse">
-                    <thead><tr id="t-head"></tr></thead>
-                    <tbody id="t-body"></tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        let fullData = {};
-        let currentSheet = [];
-        // 필터링에 사용할 핵심 항목들 (엑셀 제목에 맞춰 자동 매칭)
-        const filterKeys = ['엔진', '트림', '옵션', '외장색', '칼라', '색상', '시트', '내장', '생산일'];
-
-        async function init() {
-            const res = await fetch('/api/cars');
-            fullData = await res.json();
-            const models = Object.keys(fullData);
-            const select = document.getElementById('main-model');
-            models.forEach(m => select.add(new Option(m, m)));
-        }
-
-        function loadSheetData(sheetName) {
-            if(!sheetName) return;
-            currentSheet = fullData[sheetName];
-            createDynamicFilters();
-            applyFilters();
-        }
-
-        function createDynamicFilters() {
-            const grid = document.getElementById('filter-grid');
-            // 차종 선택 박스 외에 기존에 생성된 필터들 삭제
-            const existingFilters = grid.querySelectorAll('.dynamic-filter');
-            existingFilters.forEach(f => f.remove());
-
-            if(currentSheet.length === 0) return;
-
-            // 엑셀 첫 번째 줄에서 제목들을 가져와서 필터 박스 생성
-            const firstRow = currentSheet[0];
-            Object.keys(firstRow).forEach(key => {
-                if(filterKeys.some(fk => key.includes(fk))) {
-                    const div = document.createElement('div');
-                    div.className = 'filter-group dynamic-filter';
-                    div.innerHTML = `<label>${key}</label><select id="f-${key}" onchange="applyFilters()"></select>`;
-                    grid.appendChild(div);
-
-                    const select = div.querySelector('select');
-                    const values = [...new Set(currentSheet.map(item => item[key]))].filter(Boolean).sort();
-                    select.add(new Option(`${key} 선택`, ""));
-                    values.forEach(v => select.add(new Option(v, v)));
-                }
-            });
-        }
-
-        function applyFilters() {
-            let filtered = currentSheet;
-            const selects = document.querySelectorAll('#filter-grid select');
-            
-            selects.forEach(sel => {
-                if(sel.id === 'main-model' || !sel.value) return;
-                const key = sel.id.replace('f-', '');
-                filtered = filtered.filter(item => String(item[key]) === sel.value);
-            });
-
-            renderTable(filtered);
-        }
-
-        function renderTable(data) {
-            const head = document.getElementById('t-head');
-            const body = document.getElementById('t-body');
-            document.getElementById('res-count').innerText = data.length;
-
-            if(data.length === 0) {
-                body.innerHTML = '<tr><td colspan="20" class="p-20 text-center text-gray-300 font-medium">조건에 맞는 차량이 없습니다.</td></tr>';
-                return;
-            }
-
-            const keys = Object.keys(data[0]);
-            head.innerHTML = keys.map(k => `<th>${k}</th>`).join('');
-            body.innerHTML = data.map(row => `
-                <tr class="hover:bg-gray-50 transition-colors">
-                    ${keys.map(k => `<td>${row[k] || '-'}</td>`).join('')}
-                </tr>
-            `).join('');
-        }
-
-        init();
-    </script>
-</body>
-</html>
+// index.html 내의 핵심 로직 부분 (기존 코드를 지우고 이 원리를 적용하세요)
+function updateFilters(modelName) {
+    const data = allData[modelName];
+    
+    // 엑셀의 실제 컬럼명과 매칭 (질문자님 엑셀 기준)
+    const filters = {
+        'engine': [...new Set(data.map(item => item['트림']?.split(' ')[1] || '기타'))], // 엔진 추출 예시
+        'trim': [...new Set(data.map(item => item['트림']))],
+        'color_out': [...new Set(data.map(item => item['와장칼라']))], // 엑셀명 확인 필요
+        'color_in': [...new Set(data.map(item => item['내장칼라']))],
+        'production': [...new Set(data.map(item => item['생산일']))]
+    };
+    
+    // 이 값들을 각각의 <select> 태그에 넣어줍니다.
+}
