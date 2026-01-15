@@ -4,7 +4,7 @@ import { read, utils } from 'xlsx';
 export default async function handler(req, res) {
   try {
     // 1. 창고에서 엑셀 파일 가져오기
-    const fileUrl = "https://본인의-blob-주소/data.xlsx"; // 아래 설명 참고
+    const fileUrl = "https://https://dcylpnbnb1uwhuwp.public.blob.vercel-storage.com/%E2%96%A0%2026%EB%85%84%201%EC%9B%94%20%ED%8A%B9%EB%B3%84%EC%A1%B0%EA%B1%B4%20%EB%8C%80%EC%83%81%20%EB%A6%AC%EC%8A%A4%ED%8A%B8_%EA%B3%B5%EC%A7%80%EC%9A%A9.xlsx/data.xlsx"; // 아래 설명 참고
     const response = await fetch(fileUrl);
     const arrayBuffer = await response.arrayBuffer();
 
