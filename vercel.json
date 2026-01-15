@@ -1,7 +1,0 @@
-{
-  "rewrites": [
-    { "source": "/api/upload", "destination": "/api/upload" },
-    { "source": "/admin", "destination": "/admin.html" },
-    { "source": "/(.*)", "destination": "/index.html" }
-  ]
-}
