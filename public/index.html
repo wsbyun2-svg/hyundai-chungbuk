@@ -6,38 +6,10 @@
     <title>현대자동차 특별조건 검색엔진 - 충북</title>
     <style>
         body, html { margin: 0; padding: 0; height: 100%; width: 100%; overflow: hidden; }
-        #content-root { width: 100%; height: 100%; border: none; }
+        iframe { width: 100%; height: 100%; border: none; }
     </style>
 </head>
 <body>
-    <div id="app"></div>
-
-    <script>
-        async function loadMirror() {
-            try {
-                // 1. 동북부 사이트의 소스를 가져옵니다.
-                const response = await fetch('https://hyundai-two-phi.vercel.app/');
-                let html = await response.text();
-
-                // 2. 모든 "동북부" 글자를 "충북"으로 바꿉니다.
-                // 디자인이나 로고에 들어가는 텍스트까지 한꺼번에 바뀝니다.
-                html = html.replace(/동북부/g, '충북');
-
-                // 3. 상대 경로로 되어 있는 이미지나 스크립트가 깨지지 않게 주소를 보정합니다.
-                html = html.replace(/href="\//g, 'href="https://hyundai-two-phi.vercel.app/');
-                html = html.replace(/src="\//g, 'src="https://hyundai-two-phi.vercel.app/');
-
-                // 4. 변환된 HTML을 현재 페이지에 주입합니다.
-                document.open();
-                document.write(html);
-                document.close();
-            } catch (error) {
-                console.error('Mirroring failed:', error);
-                document.body.innerHTML = "사이트를 불러오는 중 오류가 발생했습니다.";
-            }
-        }
-
-        loadMirror();
-    </script>
+    <iframe src="/api/proxy" id="mirror-frame"></iframe>
 </body>
 </html>
