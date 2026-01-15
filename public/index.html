@@ -1,85 +1,56 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>충북 현대자동차 특별조건 검색엔진</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>현대자동차 특별조건 검색엔진 - 충북</title>
     <style>
-        /* 동북부 사이트의 특유 스타일 강제 적용 */
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; -webkit-font-smoothing: antialiased; }
-        .bg-dark { background-color: #111; }
-        .text-blue-main { color: #0070f3; }
-        .border-blue-main { border-color: #0070f3; }
-        .filter-select { border: 1px solid #eaeaea; border-radius: 5px; padding: 10px; font-size: 14px; width: 100%; appearance: none; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23999'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E") no-repeat right 10px center; background-size: 15px; }
-        th { background-color: #fafafa; border-bottom: 1px solid #eaeaea; color: #666; font-weight: 600; font-size: 12px; padding: 12px 10px; text-align: left; }
-        td { border-bottom: 1px solid #eaeaea; padding: 12px 10px; font-size: 14px; color: #333; }
-        .tab-item { padding: 15px 5px; font-size: 14px; cursor: pointer; color: #666; position: relative; }
-        .tab-item.active { color: #0070f3; font-weight: bold; border-bottom: 2px solid #0070f3; }
+        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; }
+        /* 동북부 사이트를 화면 전체에 꽉 채웁니다 */
+        iframe { width: 100%; height: 100%; border: none; }
+        
+        /* 상단에 "충북" 로고를 강제로 덮어씌우는 가림막 */
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 60px; /* 동북부 상단바 높이에 맞춤 */
+            background: #111; /* 동북부와 같은 검은색 */
+            display: flex;
+            align-items: center;
+            padding-left: 20px;
+            z-index: 999;
+            pointer-events: none; /* 클릭은 아래 iframe으로 전달되게 함 */
+        }
+        .logo {
+            color: white;
+            font-family: sans-serif;
+            font-weight: bold;
+            font-size: 20px;
+            letter-spacing: -1px;
+        }
+        .logo span { color: #666; font-weight: 300; margin-left: 5px; }
     </style>
 </head>
-<body class="bg-white">
-    <nav class="bg-dark text-white px-6 py-3 flex justify-between items-center">
-        <div class="font-bold text-lg tracking-tighter">HYUNDAI <span class="font-light text-gray-400">CHUNGBUK</span></div>
-        <div class="text-[10px] text-gray-500 font-mono uppercase tracking-widest">Special Inventory Search</div>
-    </nav>
-
-    <div class="border-b px-6 overflow-x-auto whitespace-nowrap scrollbar-hide">
-        <div id="tab-list" class="flex gap-8">
-            </div>
+<body>
+    <div class="overlay">
+        <div class="logo">HYUNDAI <span>CHUNGBUK</span></div>
     </div>
 
-    <div class="p-6 bg-[#fcfcfc]">
-        <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
-            <div>
-                <div class="text-[10px] font-bold text-gray-400 uppercase mb-1">Trim</div>
-                <select id="f-trim" onchange="applyFilters()" class="filter-select"><option value="">전체 트림</option></select>
-            </div>
-            <div>
-                <div class="text-[10px] font-bold text-gray-400 uppercase mb-1">Option</div>
-                <select id="f-option" onchange="applyFilters()" class="filter-select"><option value="">전체 옵션</option></select>
-            </div>
-            <div>
-                <div class="text-[10px] font-bold text-gray-400 uppercase mb-1">Color (Out)</div>
-                <select id="f-color-out" onchange="applyFilters()" class="filter-select"><option value="">전체 외장색</option></select>
-            </div>
-            <div>
-                <div class="text-[10px] font-bold text-gray-400 uppercase mb-1">Color (In)</div>
-                <select id="f-color-in" onchange="applyFilters()" class="filter-select"><option value="">전체 내장색</option></select>
-            </div>
-            <div>
-                <div class="text-[10px] font-bold text-gray-400 uppercase mb-1">Production</div>
-                <select id="f-prod" onchange="applyFilters()" class="filter-select"><option value="">전체 생산일</option></select>
-            </div>
-        </div>
-    </div>
-
-    <div class="px-6 py-4">
-        <div class="mb-4 text-xs text-gray-400 font-medium">검색 결과: <span id="res-count" class="text-blue-main font-bold">0</span>대</div>
-        <div class="overflow-x-auto rounded-md border border-[#eaeaea]">
-            <table class="w-full">
-                <thead><tr id="table-head"></tr></thead>
-                <tbody id="table-body"></tbody>
-            </table>
-        </div>
-    </div>
+    <iframe src="https://hyundai-two-phi.vercel.app/" id="mirror-frame"></iframe>
 
     <script>
-        let fullData = {}; let currentModel = "";
-
-        async function init() {
+        // 프레임이 로드될 때 내부의 글자를 바꾸려는 시도 (동일 도메인일 때만 완벽 작동)
+        const frame = document.getElementById('mirror-frame');
+        frame.onload = function() {
             try {
-                const res = await fetch('/api/cars');
-                fullData = await res.json();
-                const sheetNames = Object.keys(fullData);
-                const tabList = document.getElementById('tab-list');
-                
-                tabList.innerHTML = sheetNames.map(name => 
-                    `<div onclick="switchTab('${name}')" id="tab-${name}" class="tab-item">${name}</div>`
-                ).join('');
-
-                if(sheetNames.length > 0) switchTab(sheetNames[0]);
-            } catch(e) { console.error("데이터를 불러오지 못했습니다."); }
-        }
-
-        function switchTab(name) {
+                const innerDoc = frame.contentDocument || frame.contentWindow.document;
+                innerDoc.body.innerHTML = innerDoc.body.innerHTML.replace(/동북부/g, '충북');
+            } catch (e) {
+                console.log("보안 정책상 내부 텍스트 직접 수정은 제한될 수 있으나, 상단 레이어는 유지됩니다.");
+            }
+        };
+    </script>
+</body>
+</html>
