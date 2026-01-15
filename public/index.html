@@ -1,89 +1,56 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>현대자동차 특별조건 검색엔진 - 충북</title>
-    <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { font-family: -apple-system, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
-        .nav-black { background-color: #111; }
-        .tab-active { color: #0070f3; border-bottom: 2px solid #0070f3; font-weight: bold; }
-        th { background: #fafafa; color: #666; font-size: 13px; border-bottom: 1px solid #eaeaea; padding: 12px; text-align: left; }
-        td { padding: 12px; border-bottom: 1px solid #eaeaea; font-size: 14px; color: #333; }
-        .filter-select { border: 1px solid #ddd; padding: 8px; border-radius: 4px; font-size: 14px; width: 100%; outline: none; }
+        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; background-color: #111; }
+        
+        /* 1. 동북부 사이트를 전체 화면으로 가져옵니다 */
+        #mirror-frame {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        /* 2. 상단의 '동북부' 글자 부분을 '충북'으로 가려버리는 덮개 */
+        .header-mask {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 60px; /* 원본 사이트의 검은색 바 높이 */
+            background-color: #111; /* 원본과 같은 검은색 */
+            display: flex;
+            align-items: center;
+            padding-left: 20px;
+            z-index: 1000;
+            pointer-events: none; /* 이 막이 아래쪽 버튼 클릭을 방해하지 않게 함 */
+        }
+
+        .logo-text {
+            color: white;
+            font-family: 'Malgun Gothic', sans-serif;
+            font-weight: bold;
+            font-size: 20px;
+            letter-spacing: -1px;
+        }
+        .logo-text span {
+            color: #666;
+            font-weight: 300;
+            margin-left: 6px;
+            text-transform: uppercase;
+        }
     </style>
 </head>
-<body class="bg-white">
-    <nav class="nav-black text-white p-4 flex justify-between items-center px-6">
-        <div class="text-xl font-bold tracking-tighter italic">HYUNDAI <span class="font-light text-gray-400 uppercase">Chungbuk</span></div>
-        <div class="text-[10px] text-gray-500 font-mono uppercase tracking-widest text-right">
-            Hyundai Motors<br>Chungbuk Regional Headquarters
-        </div>
-    </nav>
+<body>
 
-    <div class="border-b overflow-x-auto whitespace-nowrap px-6">
-        <div id="tab-menu" class="flex gap-8 text-sm text-gray-500"></div>
+    <div class="header-mask">
+        <div class="logo-text">HYUNDAI <span>Chungbuk</span></div>
     </div>
 
-    <div class="p-6 bg-gray-50 border-b">
-        <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
-            <div><label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Trim</label>
-                <select id="f-trim" onchange="applyFilters()" class="filter-select"><option value="">전체 트림</option></select></div>
-            <div><label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Option</label>
-                <select id="f-option" onchange="applyFilters()" class="filter-select"><option value="">전체 옵션</option></select></div>
-            <div><label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Color (Out)</label>
-                <select id="f-color-out" onchange="applyFilters()" class="filter-select"><option value="">전체 외장색</option></select></div>
-            <div><label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Color (In)</label>
-                <select id="f-color-in" onchange="applyFilters()" class="filter-select"><option value="">전체 내장색</option></select></div>
-            <div><label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Production</label>
-                <select id="f-prod" onchange="applyFilters()" class="filter-select"><option value="">전체 생산일</option></select></div>
-        </div>
-    </div>
+    <iframe src="https://hyundai-two-phi.vercel.app/" id="mirror-frame"></iframe>
 
-    <div class="p-6">
-        <div class="mb-4 text-xs text-gray-400 font-medium">검색 결과: <span id="count" class="font-bold text-blue-600">0</span>대</div>
-        <div class="overflow-x-auto border border-gray-200 rounded-lg shadow-sm">
-            <table class="w-full text-left">
-                <thead><tr id="t-head"></tr></thead>
-                <tbody id="t-body"></tbody>
-            </table>
-        </div>
-    </div>
-
-    <script>
-        let allData = {}; let currentModel = "";
-        async function init() {
-            try {
-                const res = await fetch('/api/cars');
-                allData = await res.json();
-                const models = Object.keys(allData);
-                const menu = document.getElementById('tab-menu');
-                menu.innerHTML = models.map(m => `<button onclick="setTab('${m}')" id="t-${m}" class="py-4 transition-all">${m}</button>`).join('');
-                if(models.length > 0) setTab(models[0]);
-            } catch(e) { console.error("Error loading data"); }
-        }
-
-        function setTab(m) {
-            currentModel = m;
-            document.querySelectorAll('#tab-menu button').forEach(b => b.className = "py-4");
-            document.getElementById('t-'+m).className = "py-4 tab-active";
-            const data = allData[m];
-            fillSelect('f-trim', '트림', data);
-            fillSelect('f-option', '옵션', data);
-            fillSelect('f-color-out', '와장칼라', data);
-            fillSelect('f-color-in', '내장칼라', data);
-            fillSelect('f-prod', '생산일', data);
-            applyFilters();
-        }
-
-        function fillSelect(id, key, data) {
-            const el = document.getElementById(id);
-            const vals = [...new Set(data.map(item => item[key]))].filter(Boolean).sort();
-            el.innerHTML = `<option value="">전체</option>` + vals.map(v => `<option value="${v}">${v}</option>`).join('');
-        }
-
-        function applyFilters() {
-            const f = {
-                '트림': document.getElementById('f-trim').value,
-                '옵션': document.getElementById('f-option').value,
+</body>
+</html>
