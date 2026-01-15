@@ -1,122 +1,84 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>충북 현대차 재고 검색 시스템</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>현대자동차 특별조건 검색엔진</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        :root { --hyundai-blue: #002c5f; }
-        .bg-hyundai { background-color: var(--hyundai-blue); }
-        .text-hyundai { color: var(--hyundai-blue); }
-        .filter-select { @apply border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        .nav-dark { background-color: #111; }
+        .tab-active { color: #0070f3; border-bottom: 2px solid #0070f3; }
+        .filter-box { background: #f9f9f9; border: 1px solid #eaeaea; }
+        th { background: #fafafa; color: #666; font-weight: 600; font-size: 13px; border-bottom: 1px solid #eaeaea; padding: 12px; }
+        td { padding: 12px; border-bottom: 1px solid #eaeaea; font-size: 14px; }
     </style>
 </head>
-<body class="bg-gray-50 text-gray-800">
-
-    <header class="bg-hyundai text-white p-5 shadow-lg">
-        <div class="max-w-7xl mx-auto flex justify-between items-center">
-            <h1 class="text-2xl font-bold">🚗 충북 현대차 실시간 재고 현황</h1>
-            <span class="text-sm opacity-80">엑셀 업로드로 자동 업데이트됨</span>
+<body class="bg-white">
+    <nav class="nav-dark text-white p-3 text-sm flex justify-between px-6">
+        <div class="font-bold text-lg">HYUNDAI <span class="font-light text-gray-400">CHUNGBUK</span></div>
+        <div class="flex gap-4 items-center">
+            <span class="text-gray-400 text-xs">최근 업데이트: <span id="update-date">-</span></span>
         </div>
-    </header>
+    </nav>
 
-    <main class="max-w-7xl mx-auto p-6">
-        <div class="bg-white p-6 rounded-xl shadow-sm mb-8 grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div>
-                <label class="block text-xs font-bold text-gray-500 mb-1">차종 선택</label>
-                <select id="select-model" class="w-full filter-select" onchange="updateSubFilters()">
-                    <option value="">차종을 선택하세요</option>
+    <div class="border-b overflow-x-auto whitespace-nowrap scrollbar-hide">
+        <div id="tab-menu" class="flex px-4 gap-6 text-sm font-medium text-gray-500">
+            </div>
+    </div>
+
+    <div class="p-6">
+        <div class="filter-box p-4 rounded-lg flex flex-wrap gap-4 items-end">
+            <div class="flex flex-col gap-2">
+                <label class="text-xs font-bold text-gray-400 uppercase">Model Detail</label>
+                <select id="select-trim" onchange="applyFilters()" class="border p-2 rounded text-sm w-48 focus:outline-none">
+                    <option value="">전체 트림</option>
                 </select>
             </div>
-            <div>
-                <label class="block text-xs font-bold text-gray-500 mb-1">세부 트림</label>
-                <select id="select-trim" class="w-full filter-select" onchange="applyFilters()">
-                    <option value="">전체</option>
+            <div class="flex flex-col gap-2">
+                <label class="text-xs font-bold text-gray-400 uppercase">Color</label>
+                <select id="select-color" onchange="applyFilters()" class="border p-2 rounded text-sm w-40 focus:outline-none">
+                    <option value="">전체 색상</option>
                 </select>
             </div>
-            <div>
-                <label class="block text-xs font-bold text-gray-500 mb-1">외장 컬러</label>
-                <select id="select-color" class="w-full filter-select" onchange="applyFilters()">
-                    <option value="">전체</option>
-                </select>
-            </div>
-            <div class="flex items-end">
-                <button onclick="resetFilters()" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold py-2 rounded transition">
-                    필터 초기화
-                </button>
-            </div>
+            <button onclick="resetFilters()" class="text-sm text-gray-400 underline ml-auto">초기화</button>
         </div>
+    </div>
 
-        <div class="mb-4 text-sm text-gray-600">
-            총 <span id="count-total" class="font-bold text-blue-600">0</span>개의 매물이 검색되었습니다.
+    <div class="px-6 pb-20">
+        <div class="mb-4 text-sm"><span id="result-count" class="font-bold">0</span> 대의 검색 결과</div>
+        <div class="overflow-x-auto border rounded-lg">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr id="table-header"></tr>
+                </thead>
+                <tbody id="table-body"></tbody>
+            </table>
         </div>
-
-        <div class="bg-white rounded-xl shadow-sm overflow-hidden">
-            <div class="overflow-x-auto">
-                <table class="w-full text-sm text-left">
-                    <thead class="bg-gray-50 border-b">
-                        <tr id="table-header">
-                            </tr>
-                    </thead>
-                    <tbody id="table-body" class="divide-y">
-                        </tbody>
-                </table>
-            </div>
-        </div>
-    </main>
+    </div>
 
     <script>
-        let rawData = {}; 
-        let currentModelData = [];
+        let allData = {};
+        let currentModel = "";
 
-        async function init() {
+        async function loadData() {
             try {
                 const res = await fetch('/api/cars');
-                rawData = await res.json();
+                allData = await res.json();
+                const models = Object.keys(allData);
                 
-                // 차종 셀렉트 박스 채우기
-                const modelSelect = document.getElementById('select-model');
-                Object.keys(rawData).forEach(model => {
-                    const opt = document.createElement('option');
-                    opt.value = model;
-                    opt.textContent = model;
-                    modelSelect.appendChild(opt);
-                });
-            } catch (e) { alert("데이터 로딩 실패"); }
+                // 탭 생성
+                const tabMenu = document.getElementById('tab-menu');
+                tabMenu.innerHTML = models.map(m => `
+                    <button onclick="selectTab('${m}')" id="tab-${m}" class="py-4 px-2 cursor-pointer transition-all">${m}</button>
+                `).join('');
+
+                if(models.length > 0) selectTab(models[0]);
+                document.getElementById('update-date').innerText = new Date().toLocaleDateString();
+            } catch(e) { console.error("데이터 로드 실패"); }
         }
 
-        function updateSubFilters() {
-            const model = document.getElementById('select-model').value;
-            if(!model) return;
-            
-            currentModelData = rawData[model];
-            
-            // 트림 필터 업데이트
-            const trims = [...new Set(currentModelData.map(item => item['트림']))];
-            updateSelect('select-trim', trims);
-            
-            // 컬러 필터 업데이트
-            const colors = [...new Set(currentModelData.map(item => item['칼라']))];
-            updateSelect('select-color', colors);
-
-            applyFilters();
-        }
-
-        function updateSelect(id, items) {
-            const el = document.getElementById(id);
-            el.innerHTML = '<option value="">전체</option>';
-            items.filter(Boolean).forEach(item => {
-                const opt = document.createElement('option');
-                opt.value = item;
-                opt.textContent = item;
-                el.appendChild(opt);
-            });
-        }
-
-        function applyFilters() {
-            const trimVal = document.getElementById('select-trim').value;
-            const colorVal = document.getElementById('select-color').value;
-
-            const filtered = currentModelData.filter(item => {
-                return (!trim
+        function selectTab(model) {
+            currentModel = model;
+            // 탭 활성화 디자인 처리
+            document.querySelectorAll('#tab-
