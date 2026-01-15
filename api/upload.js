@@ -1,17 +1,17 @@
 import { put } from '@vercel/blob';
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') return res.status(405).send('POST만 가능합니다.');
+  if (req.method !== 'POST') return res.status(405).send('POST 요청만 가능합니다.');
 
   try {
-    // 엑셀 파일을 Vercel Blob 창고에 'data.xlsx'라는 이름으로 저장합니다.
+    // data.xlsx라는 이름으로 창고에 저장 (이미 있으면 덮어씀)
     const blob = await put('data.xlsx', req, {
       access: 'public',
-      addRandomSuffix: false, // 파일명을 고정해야 홈페이지가 찾기 쉽습니다.
+      addRandomSuffix: false,
     });
 
-    return res.status(200).json({ message: "업로드 성공", url: blob.url });
+    return res.status(200).json({ message: "성공적으로 업데이트되었습니다!", url: blob.url });
   } catch (error) {
-    return res.status(500).send(error.message);
+    return res.status(500).json({ error: error.message });
   }
 }
