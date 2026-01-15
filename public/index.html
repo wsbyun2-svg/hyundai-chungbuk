@@ -1,15 +1,125 @@
-// index.html 내의 핵심 로직 부분 (기존 코드를 지우고 이 원리를 적용하세요)
-function updateFilters(modelName) {
-    const data = allData[modelName];
-    
-    // 엑셀의 실제 컬럼명과 매칭 (질문자님 엑셀 기준)
-    const filters = {
-        'engine': [...new Set(data.map(item => item['트림']?.split(' ')[1] || '기타'))], // 엔진 추출 예시
-        'trim': [...new Set(data.map(item => item['트림']))],
-        'color_out': [...new Set(data.map(item => item['와장칼라']))], // 엑셀명 확인 필요
-        'color_in': [...new Set(data.map(item => item['내장칼라']))],
-        'production': [...new Set(data.map(item => item['생산일']))]
-    };
-    
-    // 이 값들을 각각의 <select> 태그에 넣어줍니다.
-}
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>현대자동차 특별조건 검색엔진 - 충북</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .nav-dark { background-color: #111; }
+        .tab-active { color: #0070f3; border-bottom: 2px solid #0070f3; font-weight: bold; }
+        th { background: #fafafa; color: #666; font-size: 12px; border-bottom: 1px solid #eaeaea; padding: 10px; white-space: nowrap; }
+        td { padding: 10px; border-bottom: 1px solid #eee; font-size: 13px; }
+        select { border: 1px solid #ddd; padding: 6px; border-radius: 4px; font-size: 13px; width: 100%; outline: none; }
+    </style>
+</head>
+<body class="bg-white">
+    <nav class="nav-dark text-white p-4 flex justify-between items-center px-6">
+        <div class="text-xl font-bold italic text-blue-500">HYUNDAI <span class="font-light text-white">CHUNGBUK</span></div>
+        <div class="text-[10px] text-gray-500 uppercase tracking-widest">Chungbuk Special Stock Search</div>
+    </nav>
+
+    <div class="border-b overflow-x-auto bg-white sticky top-0 z-10">
+        <div id="tab-menu" class="flex px-4 gap-6 text-sm text-gray-500 font-medium"></div>
+    </div>
+
+    <div class="p-4 bg-gray-50 border-b grid grid-cols-2 md:grid-cols-5 gap-3">
+        <div><label class="text-[9px] font-bold text-gray-400 uppercase">Trim</label>
+            <select id="f-trim" onchange="applyFilters()"><option value="">전체 트림</option></select></div>
+        <div><label class="text-[9px] font-bold text-gray-400 uppercase">Option</label>
+            <select id="f-option" onchange="applyFilters()"><option value="">전체 옵션</option></select></div>
+        <div><label class="text-[9px] font-bold text-gray-400 uppercase">Color (Out)</label>
+            <select id="f-color-out" onchange="applyFilters()"><option value="">전체 외장색</option></select></div>
+        <div><label class="text-[9px] font-bold text-gray-400 uppercase">Color (In)</label>
+            <select id="f-color-in" onchange="applyFilters()"><option value="">전체 내장색</option></select></div>
+        <div><label class="text-[9px] font-bold text-gray-400 uppercase">Production</label>
+            <select id="f-prod" onchange="applyFilters()"><option value="">전체 생산일</option></select></div>
+    </div>
+
+    <div class="p-4">
+        <div class="mb-3 text-xs text-gray-400">검색 결과: <span id="count" class="font-bold text-blue-600">0</span>대</div>
+        <div class="overflow-x-auto border rounded-lg shadow-sm">
+            <table class="w-full text-left">
+                <thead><tr id="t-head"></tr></thead>
+                <tbody id="t-body" class="divide-y divide-gray-100"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        let allData = {}; let currentModel = "";
+        
+        async function init() {
+            try {
+                const res = await fetch('/api/cars');
+                allData = await res.json();
+                const models = Object.keys(allData);
+                const menu = document.getElementById('tab-menu');
+                menu.innerHTML = models.map(m => `<button onclick="setTab('${m}')" id="t-${m}" class="py-4 px-1 transition-all">${m}</button>`).join('');
+                if(models.length > 0) setTab(models[0]);
+            } catch(e) { document.getElementById('t-body').innerHTML = '<tr><td class="p-10 text-center">데이터를 불러오는 중입니다... 관리자 페이지에서 엑셀을 업로드했는지 확인하세요.</td></tr>'; }
+        }
+
+        function setTab(m) {
+            currentModel = m;
+            document.querySelectorAll('#tab-menu button').forEach(b => b.className = "py-4 px-1 border-b-2 border-transparent");
+            document.getElementById('t-'+m).className = "py-4 px-1 tab-active";
+            
+            const data = allData[m];
+            // 엑셀 실제 컬럼명 매칭: 와장칼라, 내장칼라, 생산일, 트림, 옵션
+            fillSelect('f-trim', '트림', data);
+            fillSelect('f-option', '옵션', data);
+            fillSelect('f-color-out', '와장칼라', data);
+            fillSelect('f-color-in', '내장칼라', data);
+            fillSelect('f-prod', '생산일', data);
+            applyFilters();
+        }
+
+        function fillSelect(id, key, data) {
+            const el = document.getElementById(id);
+            const vals = [...new Set(data.map(item => item[key]))].filter(Boolean).sort();
+            el.innerHTML = `<option value="">전체</option>` + vals.map(v => `<option value="${v}">${v}</option>`).join('');
+        }
+
+        function applyFilters() {
+            const filters = {
+                '트림': document.getElementById('f-trim').value,
+                '옵션': document.getElementById('f-option').value,
+                '와장칼라': document.getElementById('f-color-out').value,
+                '내장칼라': document.getElementById('f-color-in').value,
+                '생산일': document.getElementById('f-prod').value
+            };
+
+            const filtered = allData[currentModel].filter(item => 
+                (!filters['트림'] || item['트림'] === filters['트림']) &&
+                (!filters['옵션'] || item['옵션'] === filters['옵션']) &&
+                (!filters['와장칼라'] || item['와장칼라'] === filters['와장칼라']) &&
+                (!filters['내장칼라'] || item['내장칼라'] === filters['내장칼라']) &&
+                (!filters['생산일'] || item['생산일'] === filters['생산일'])
+            );
+            renderTable(filtered);
+        }
+
+        function renderTable(data) {
+            const head = document.getElementById('t-head');
+            const body = document.getElementById('t-body');
+            document.getElementById('count').innerText = data.length;
+            
+            // 동북부 사이트와 동일한 출력 항목
+            const displayCols = ['생산일', '트림', '옵션', '와장칼라', '내장칼라', '판매가', '특별'];
+            head.innerHTML = displayCols.map(c => `<th>${c === '특별' ? '특별조건' : c}</th>`).join('');
+            
+            if(data.length === 0) {
+                body.innerHTML = '<tr><td colspan="7" class="p-20 text-center text-gray-400">해당 조건의 차량이 없습니다.</td></tr>';
+                return;
+            }
+
+            body.innerHTML = data.map(row => `
+                <tr class="hover:bg-gray-50 transition-colors">
+                    ${displayCols.map(c => `<td class="border-b">${row[c] || '-'}</td>`).join('')}
+                </tr>
+            `).join('');
+        }
+        init();
+    </script>
+</body>
+</html>
